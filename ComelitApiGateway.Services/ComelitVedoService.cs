@@ -4,7 +4,10 @@ using ComelitApiGateway.Commons.Enums.Vedo;
 using ComelitApiGateway.Commons.Interfaces;
 using Microsoft.Extensions.Configuration;
 using System;
+using System.Net;
 using System.Net.Http.Json;
+using System.Text;
+using static System.Net.WebRequestMethods;
 
 namespace ComelitApiGateway.Services
 {
@@ -81,6 +84,19 @@ namespace ComelitApiGateway.Services
                 var response = await client.GetAsync($"{url}");
 
                 if (!response.IsSuccessStatusCode) return false;
+                return true;
+            }
+        }
+
+        public async Task<bool> ComelitApiPostCall(Dictionary<string, string> @params)
+        {
+            using (var client = await BuildHttpClient())
+            {               
+                var content = new FormUrlEncodedContent(@params);
+                var response = await client.PostAsync($"/action.cgi", content);
+
+                // this call return 404 even if the action is executed successfully, so i check only if the status code is different from 404
+                if (response.StatusCode != HttpStatusCode.NotFound) return false;
                 return true;
             }
         }
@@ -266,19 +282,21 @@ namespace ComelitApiGateway.Services
 
         public async Task<bool> ArmAlarm(int? area = null, bool force = true)
         {
-            return await ComelitApiActionCall(new Dictionary<string, string>() {
-                { "force", force ? "1" : "0" },
-                { "vedo", "1" },
-                { "tot", area?.ToString() ?? "32" } //32 = all the areas
+            return await ComelitApiPostCall(new Dictionary<string, string>() {
+                { "forced", force ? "1" : "0" },
+                { "vedo_param", "1" },
+                { "type_param", "tot" },
+                { "area_param", area?.ToString() ?? "32" } //32 = all the areas
             });
         }
 
         public async Task<bool> DisarmAlarm(int? area = null, bool force = true)
         {
-            return await ComelitApiActionCall(new Dictionary<string, string>() {
-                { "force", force ? "1" : "0" },
-                { "vedo", "1" },
-                { "dis", area?.ToString() ?? "32" }
+            return await ComelitApiPostCall(new Dictionary<string, string>() {
+                { "forced", force ? "1" : "0" },
+                { "vedo_param", "1" },
+                { "type_param", "dis" },
+                { "area_param", area?.ToString() ?? "32" }
             });
         }
 

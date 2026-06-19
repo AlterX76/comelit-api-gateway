@@ -42,6 +42,9 @@ builder.Services.AddSwaggerGen(c =>
 
 });
 
+// Active ping for keep-alive to avoid session timeout on Comelit CGI
+builder.Services.AddHostedService<ComelitKeepAliveService>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment() || Convert.ToBoolean(builder.Configuration["ENABLE_SWAGGER"]) == true)
