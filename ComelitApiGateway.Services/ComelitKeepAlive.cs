@@ -35,7 +35,7 @@ namespace ComelitApiGateway.Services
                 {
                     // Log the error so you know the API failed, 
                     // but DO NOT let it escape the method.
-                    _logger.LogError(ex, "Error occurred during Comelit keep-alive ping.");
+                    logger.LogError(ex, "Error occurred during Comelit keep-alive ping.");
                 }
             }
         }
