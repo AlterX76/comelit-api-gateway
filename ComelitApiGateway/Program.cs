@@ -32,6 +32,7 @@ if (!string.IsNullOrEmpty(timeZone))
 // Add services to the container.
 builder.Services.AddSingleton<IComelitVedo, ComelitVedoService>();
 
+builder.Services.AddHttpClient();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
