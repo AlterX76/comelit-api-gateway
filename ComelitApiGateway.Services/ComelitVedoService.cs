@@ -14,6 +14,7 @@ namespace ComelitApiGateway.Services
     public class ComelitVedoService : IComelitVedo
     {
         protected readonly IConfiguration _config;
+        private IHttpClientFactory _httpClientFactory;
         //Base address of comelit vedo
         private static string _BASE_ADDRESS = "";
         //Auth coockie for requests
@@ -27,19 +28,19 @@ namespace ComelitApiGateway.Services
         private static List<VedoZoneDTO> Zones = new();
 
         #endregion
-        public ComelitVedoService(IConfiguration config)
+        public ComelitVedoService(IConfiguration config, IHttpClientFactory httpFactory)
         {
             _config = config;
+            _httpClientFactory = httpFactory;
             _BASE_ADDRESS = config["VEDO_URL"]?.ToString() ?? "";
         }
 
         public async Task<string> Login()
         {
-            using (HttpClient client = await BuildHttpClient(true))
-            {
-                HttpResponseMessage response = await client.PostAsync("/login.cgi", new StringContent($"code={_config["VEDO_KEY"]}&_={DateTime.Now.ToString("ddMMyyyyhhmmss")}"));
-                return SetCookieUID(response);
-            }
+            var client = await BuildHttpClientAsync(true);
+
+            HttpResponseMessage response = await client.PostAsync("/login.cgi", new StringContent($"code={_config["VEDO_KEY"]}&_={DateTime.Now.ToString("ddMMyyyyhhmmss")}"));
+            return SetCookieUID(response);
         }
 
         #region Vedo System API Calls
@@ -47,58 +48,54 @@ namespace ComelitApiGateway.Services
         public async Task<T?> ComelitApiGetCall<T>(string apiUrl) where T : class
         {
             T? status;
-            using (var client = await BuildHttpClient())
+
+            var client = await BuildHttpClientAsync();
+            var response = await client.GetAsync($"{apiUrl}?_={DateTime.Now.ToString("ddMMyyyyhhmmss")}");
+            var responseString = await response.Content.ReadAsStringAsync();
+
+            if (responseString.Contains("Not logged"))
             {
-                var response = await client.GetAsync($"{apiUrl}?_={DateTime.Now.ToString("ddMMyyyyhhmmss")}");
-                var responseString = await response.Content.ReadAsStringAsync();
+                await Login();
+                loginRetryCounter++;
+                Thread.Sleep(1000);
 
-                if (responseString.Contains("Not logged"))
-                {
-                    await Login();
-                    loginRetryCounter++;
-                    Thread.Sleep(1000);
+                if (loginRetryCounter > 5) throw new UnauthorizedAccessException();
 
-                    if (loginRetryCounter > 5) throw new UnauthorizedAccessException();
+                return await ComelitApiGetCall<T>(apiUrl);
 
-                    return await ComelitApiGetCall<T>(apiUrl);
-
-                }
-
-                loginRetryCounter = 0;
-                status = await response.Content.ReadFromJsonAsync<T>();
             }
+
+            loginRetryCounter = 0;
+            status = await response.Content.ReadFromJsonAsync<T>();
 
             return status;
         }
 
         public async Task<bool> ComelitApiActionCall(Dictionary<string, string> @params)
         {
-            using (var client = await BuildHttpClient())
+            var client = await BuildHttpClientAsync();
+
+            string url = $"/action.cgi?_={DateTime.Now.ToString("ddMMyyyyhhmmss")}";
+            foreach (var p in @params)
             {
-                string url = $"/action.cgi?_={DateTime.Now.ToString("ddMMyyyyhhmmss")}";
-                foreach (var p in @params)
-                {
-                    url += $"&{p.Key}={p.Value}";
-                }
-
-                var response = await client.GetAsync($"{url}");
-
-                if (!response.IsSuccessStatusCode) return false;
-                return true;
+                url += $"&{p.Key}={p.Value}";
             }
+
+            var response = await client.GetAsync($"{url}");
+
+            if (!response.IsSuccessStatusCode) return false;
+            return true;
         }
 
         public async Task<bool> ComelitApiPostCall(Dictionary<string, string> @params)
         {
-            using (var client = await BuildHttpClient())
-            {               
-                var content = new FormUrlEncodedContent(@params);
-                var response = await client.PostAsync($"/action.cgi", content);
+            var client = await BuildHttpClientAsync();
+            var content = new FormUrlEncodedContent(@params);
+            var response = await client.PostAsync($"/action.cgi", content);
 
-                // this call return 404 even if the action is executed successfully, so i check only if the status code is different from 404
-                if (response.StatusCode != HttpStatusCode.NotFound) return false;
-                return true;
-            }
+            // this call return 404 even if the action is executed successfully, so i check only if the status code is different from 404
+            if (response.StatusCode != HttpStatusCode.NotFound) return false;
+            return true;
         }
 
         public async Task<AreaStatusResponseDTO> ComelitGetAreasStatus()
@@ -336,9 +333,9 @@ namespace ComelitApiGateway.Services
 
         #region private
 
-        private async Task<HttpClient> BuildHttpClient(bool isLogin = false)
+        private async Task<HttpClient> BuildHttpClientAsync(bool isLogin = false)
         {
-            HttpClient client = new();
+            HttpClient client = _httpClientFactory.CreateClient();
 
             client.DefaultRequestHeaders.UserAgent.Clear();
             client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.113 Safari/537.36");
@@ -356,9 +353,6 @@ namespace ComelitApiGateway.Services
 
                 client.DefaultRequestHeaders.Add("Cookie", _UID);
             }
-
-
-
             return client;
         }
 
