@@ -344,6 +344,8 @@ namespace ComelitApiGateway.Services
             client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.113 Safari/537.36");
             client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
             client.BaseAddress = new Uri(_BASE_ADDRESS);
+            client.Timeout = TimeSpan.FromSeconds(10);
+
             if (!isLogin)
             {
                 //If cookie is empty i call login to get new UID

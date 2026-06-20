@@ -26,10 +26,16 @@ namespace ComelitApiGateway.Services
                 {
                     await PingStatusAsync(stoppingToken);
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
-                    // The 'when' block prevents logging errors if the application is simply shutting down
-                    logger.LogError(ex, "Error during keep-alive ping.");
+                    // This is a normal shutdown, just exit the loop
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    // Log the error so you know the API failed, 
+                    // but DO NOT let it escape the method.
+                    _logger.LogError(ex, "Error occurred during Comelit keep-alive ping.");
                 }
             }
         }
