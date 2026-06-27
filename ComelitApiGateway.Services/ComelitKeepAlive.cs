@@ -1,5 +1,6 @@
 ﻿using ComelitApiGateway.Commons.Dtos.Vedo;
 using ComelitApiGateway.Commons.Interfaces;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -7,19 +8,20 @@ namespace ComelitApiGateway.Services
 {
     public class ComelitKeepAliveService(
         IComelitVedo comelitClient,
+        IConfiguration configuration,
         ILogger<ComelitKeepAliveService> logger) : BackgroundService
     {
-        private readonly TimeSpan _interval = TimeSpan.FromMinutes(1);
+        private readonly TimeSpan _interval = TimeSpan.FromSeconds(
+            int.TryParse(configuration["KEEPALIVE_INTERVAL_SECONDS"], out var s) && s > 0 ? s : 60);
 
-        private readonly IComelitVedo comelitVedoClient = comelitClient;
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            logger.LogInformation("ComelitKeepAliveService started.");
+            logger.LogInformation("ComelitKeepAliveService started. Ping interval: {Interval}.", _interval);
 
             using PeriodicTimer timer = new(_interval);
 
-            // The loop advances only when the timer ticks (every 1 minute)
+            // The loop advances only when the timer ticks (every x seconds)
             while (await timer.WaitForNextTickAsync(stoppingToken))
             {
                 try
@@ -42,16 +44,16 @@ namespace ComelitApiGateway.Services
 
         private async Task PingStatusAsync(CancellationToken cancellationToken)
         {
-            // Use GetAsync passing the cancellation token directly
-            var response = await comelitVedoClient.GetAreasStatus();
+            // Get areas to check if the session is still valid. If not, re-login.
+            var response = await comelitClient.GetAreasStatus();
 
             if (response.Any())
             {
-                logger.LogInformation("Ping was successful.");
+                logger.LogDebug("Ping was successful.");
             }
             else
             {
-                _ = await comelitVedoClient.Login();
+                _ = await comelitClient.Login();
                 logger.LogWarning("Ping failed, re-login attempted.");
             }
         }

@@ -33,6 +33,8 @@ docker run -d giogdev/comelit-api-gateway:latest
     -e VEDO_URL=<url>
     -e VEDO_EXCLUDED_AREAS_ID=<id>
     -e ENABLE_SWAGGER=<true/false>
+    -e KEEPALIVE_ENABLED=<true/false>
+    -e KEEPALIVE_INTERVAL_SECONDS=<seconds>
 ~~~
 or use docker-compose:
 ~~~
@@ -46,6 +48,8 @@ services:
       VEDO_URL: "http://192.168.1.10"
       ENABLE_SWAGGER: "true"
       VEDO_EXCLUDED_AREAS_ID: "5,6,7"
+      KEEPALIVE_ENABLED: "true"
+      KEEPALIVE_INTERVAL_SECONDS: "60"
 ~~~
 
 
@@ -67,6 +71,15 @@ _Example: 5,6,7_
 Enable swagger UI, navigate _\<container_IP>\<container:port>/swagger_. \
 Default = true \
 _Example: true_
+##### KEEPALIVE_ENABLED
+Enable the background keep-alive ping that periodically queries the Comelit Vedo system to avoid session timeout on the CGI interface. \
+**Required from version 2.15.X onwards**: without it the Comelit control unit goes into sleep mode. \
+Default = false \
+_Example: true_
+##### KEEPALIVE_INTERVAL_SECONDS
+Interval, in seconds, between keep-alive pings. Only relevant when _KEEPALIVE_ENABLED_ is true. \
+Default = 60 \
+_Example: 120_
 
 ## Home assistant integration
 ![Home assistant integration](https://raw.githubusercontent.com/Asganafer/comelit-api-gateway/refs/heads/main/docs/images/home-assistant-schema.jpg)

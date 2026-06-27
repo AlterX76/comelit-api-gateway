@@ -43,8 +43,12 @@ builder.Services.AddSwaggerGen(c =>
 
 });
 
-// Active ping for keep-alive to avoid session timeout on Comelit CGI
-builder.Services.AddHostedService<ComelitKeepAliveService>();
+// Active ping for keep-alive to avoid session timeout on 
+// Comelit CGI and avoid Comelit sleep mode
+if (Convert.ToBoolean(builder.Configuration["KEEPALIVE_ENABLED"]))
+{
+    builder.Services.AddHostedService<ComelitKeepAliveService>();
+}
 
 var app = builder.Build();
 
