@@ -47,7 +47,11 @@ docker buildx build \
 | `VEDO_URL` | Yes | — | IP address of the Vedo alarm panel (e.g. `http://192.168.1.100`) |
 | `VEDO_KEY` | Yes | — | PIN of the alarm |
 | `VEDO_EXCLUDED_AREAS_ID` | No | — | Comma-separated area IDs to exclude (e.g. `4,5,6,7`) |
+| `VEDO_API_VERSION_OVERRIDE` | No | _(auto-detect)_ | Forces the arm/disarm API dialect. Empty = auto-detect firmware; `v1` (old GET) or `v2` (new POST) to force it |
 | `ENABLE_SWAGGER` | No | `false` | Enable Swagger UI |
+| `KEEPALIVE_ENABLED` | No | `false` | Enable the background keep-alive ping (required from firmware 2.15.X onwards) |
+| `KEEPALIVE_INTERVAL_SECONDS` | No | `60` | Interval in seconds between keep-alive pings (only if `KEEPALIVE_ENABLED` is true) |
+| `PORT` | No | `8080` | Port exposed on the host |
 | `CONTAINER_PORT` | No | `5000` | Port used inside the container |
 
 ### docker run
@@ -81,6 +85,10 @@ VEDO_KEY=XXXXXXX                 # PIN of your alarm
 VEDO_URL=http://192.168.1.XXX    # IP of your Vedo alarm panel
 VEDO_EXCLUDED_AREAS_ID=4,5,6,7   # Area IDs to exclude (optional)
 ENABLE_SWAGGER=true              # Enable Swagger UI (optional, default: false)
+KEEPALIVE_ENABLED=true           # Enable keep-alive ping, required from firmware 2.15.X (optional, default: false)
+KEEPALIVE_INTERVAL_SECONDS=60    # Keep-alive interval in seconds (optional, default: 60)
+
+VEDO_API_VERSION_OVERRIDE=       # [Optional] Force arm/disarm dialect: empty=auto, v1=old GET, v2=new POST
 ```
 
 ### 2. Start the container

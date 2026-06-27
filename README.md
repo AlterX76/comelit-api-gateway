@@ -32,6 +32,7 @@ docker run -d giogdev/comelit-api-gateway:latest
     -e VEDO_KEY=<key>
     -e VEDO_URL=<url>
     -e VEDO_EXCLUDED_AREAS_ID=<id>
+    -e VEDO_API_VERSION_OVERRIDE=<v1,v2 or leave empty for auto detect>
     -e ENABLE_SWAGGER=<true/false>
     -e KEEPALIVE_ENABLED=<true/false>
     -e KEEPALIVE_INTERVAL_SECONDS=<seconds>
@@ -48,6 +49,7 @@ services:
       VEDO_URL: "http://192.168.1.10"
       ENABLE_SWAGGER: "true"
       VEDO_EXCLUDED_AREAS_ID: "5,6,7"
+      VEDO_API_VERSION_OVERRIDE: "" # leave empty for auto detect
       KEEPALIVE_ENABLED: "true"
       KEEPALIVE_INTERVAL_SECONDS: "60"
 ~~~
@@ -67,6 +69,12 @@ List of area's IDs that are not configured in your system or you won't include i
 By default there are 8 areas in comelit configuration but not all areas need to be configured.\
 Separate them with comma.\
 _Example: 5,6,7_
+##### VEDO_API_VERSION_OVERRIDE
+Forces the API dialect used to arm/disarm the alarm. Leave empty to auto-detect the firmware. \
+Older firmwares (e.g. 2.7.X) use `v1` (HTTP GET on /action.cgi), newer ones (e.g. 2.15.X) use `v2` (HTTP POST). \
+Auto-detection inspects the panel home page, so normally you don't need to set this; use it only if detection fails. \
+Default = empty (auto-detect) \
+_Example: v1_
 ##### ENABLE_SWAGGER
 Enable swagger UI, navigate _\<container_IP>\<container:port>/swagger_. \
 Default = true \

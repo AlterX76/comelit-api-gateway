@@ -13,4 +13,6 @@ services:
       - KEEPALIVE_ENABLED=${KEEPALIVE_ENABLED}
       - KEEPALIVE_INTERVAL_SECONDS=${KEEPALIVE_INTERVAL_SECONDS}
       - TZ=Europe/Rome
+      # Optional -------------
+      #- VEDO_API_VERSION_OVERRIDE=${VEDO_API_VERSION_OVERRIDE}
     restart: unless-stopped

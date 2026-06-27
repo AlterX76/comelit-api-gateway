@@ -93,9 +93,9 @@ namespace ComelitApiGateway.Services
             var content = new FormUrlEncodedContent(@params);
             var response = await client.PostAsync($"/action.cgi", content);
 
-            // this call return 404 even if the action is executed successfully, so i check only if the status code is different from 404
-            if (response.StatusCode != HttpStatusCode.NotFound) return false;
-            return true;
+            // Depending on the firmware, the VEDO panel may reply 404 even when the action succeeds,
+            // while other firmwares reply 200. Treat both as success (same behaviour as aiocomelit).
+            return response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound;
         }
 
         public async Task<AreaStatusResponseDTO> ComelitGetAreasStatus()
@@ -279,22 +279,12 @@ namespace ComelitApiGateway.Services
 
         public async Task<bool> ArmAlarm(int? area = null, bool force = true)
         {
-            return await ComelitApiPostCall(new Dictionary<string, string>() {
-                { "forced", force ? "1" : "0" },
-                { "vedo_param", "1" },
-                { "type_param", "tot" },
-                { "area_param", area?.ToString() ?? "32" } //32 = all the areas
-            });
+            return await SetAreaStatus("tot", area, force);
         }
 
         public async Task<bool> DisarmAlarm(int? area = null, bool force = true)
         {
-            return await ComelitApiPostCall(new Dictionary<string, string>() {
-                { "forced", force ? "1" : "0" },
-                { "vedo_param", "1" },
-                { "type_param", "dis" },
-                { "area_param", area?.ToString() ?? "32" }
-            });
+            return await SetAreaStatus("dis", area, force);
         }
 
         public async Task<bool> ExcludeZone(int zoneId)
@@ -332,6 +322,48 @@ namespace ComelitApiGateway.Services
         #endregion
 
         #region private
+
+        // Detected once and cached: VEDO panels expose two different /action.cgi dialects.
+        private static VedoFirmwareVersion? _firmwareVersion = null;
+
+        private async Task<VedoFirmwareVersion> GetFirmwareVersionAsync()
+        {
+            if (_firmwareVersion.HasValue) return _firmwareVersion.Value;
+
+            // Manual override via configuration (v1 / v2), otherwise auto-detect.
+            var configured = _config["VEDO_API_VERSION_OVERRIDE"]?.Trim().ToLowerInvariant();
+            if (configured == "v1") return (_firmwareVersion = VedoFirmwareVersion.V1).Value;
+            if (configured == "v2") return (_firmwareVersion = VedoFirmwareVersion.V2).Value;
+
+            // The v2 firmware web UI references the Comelit group site in index.shtml.
+            var client = await BuildHttpClientAsync();
+            var response = await client.GetAsync("/index.shtml");
+            var body = await response.Content.ReadAsStringAsync();
+            _firmwareVersion = body.Contains("www.comelitgroup.com") ? VedoFirmwareVersion.V2 : VedoFirmwareVersion.V1;
+            return _firmwareVersion.Value;
+        }
+
+        // Arm ("tot") or disarm ("dis") an area, picking the call style for the detected firmware.
+        private async Task<bool> SetAreaStatus(string action, int? area, bool force)
+        {
+            var areaParam = area?.ToString() ?? "32"; // 32 = all the areas
+
+            if (await GetFirmwareVersionAsync() == VedoFirmwareVersion.V2)
+            {
+                return await ComelitApiPostCall(new Dictionary<string, string>() {
+                    { "forced", force ? "1" : "0" },
+                    { "vedo_param", "1" },
+                    { "type_param", action },
+                    { "area_param", areaParam }
+                });
+            }
+
+            return await ComelitApiActionCall(new Dictionary<string, string>() {
+                { "force", force ? "1" : "0" },
+                { "vedo", "1" },
+                { action, areaParam }
+            });
+        }
 
         private async Task<HttpClient> BuildHttpClientAsync(bool isLogin = false)
         {
