@@ -1,13 +1,9 @@
-﻿using ComelitApiGateway.Commons.Dtos.Vedo;
+using ComelitApiGateway.Commons.Dtos.Vedo;
 using ComelitApiGateway.Commons.Enums.Vedo;
 using ComelitApiGateway.Commons.Interfaces;
 using ComelitApiGateway.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
 
 namespace ComelitApiGateway.Controllers
 {
@@ -30,11 +26,11 @@ namespace ComelitApiGateway.Controllers
         /// <returns></returns>
         [HttpGet("status")]
         [ProducesResponseType(typeof(VedoStatusModel), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetGeneralStatus()
+        public async Task<IActionResult> GetGeneralStatus(CancellationToken cancellationToken)
         {
             try
             {
-                var areas = await _vedo.GetAreasStatus();
+                var areas = await _vedo.GetAreasStatusAsync(cancellationToken);
                 if (areas.Any(x => x.Alarm))
                 {
                     return Ok(new
@@ -86,11 +82,11 @@ namespace ComelitApiGateway.Controllers
         /// <returns></returns>
         [HttpGet("areas")]
         [ProducesResponseType(typeof(List<VedoAreaStatusDTO>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetStatusAsync()
+        public async Task<IActionResult> GetStatusAsync(CancellationToken cancellationToken)
         {
             try
             {
-                return Ok(await _vedo.GetAreasStatus());
+                return Ok(await _vedo.GetAreasStatusAsync(cancellationToken));
             }
             catch (Exception ex)
             {
@@ -104,15 +100,16 @@ namespace ComelitApiGateway.Controllers
         /// Get status of specific area
         /// </summary>
         /// <param name="areaId"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpGet("areas/{areaId}")]
         [ProducesResponseType(typeof(VedoAreaStatusDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        public async Task<IActionResult> GetAreaStatus(int areaId)
+        public async Task<IActionResult> GetAreaStatus(int areaId, CancellationToken cancellationToken)
         {
             try
             {
-                return Ok((await _vedo.GetAreasStatus()).FirstOrDefault(x => x.Id == areaId));
+                return Ok((await _vedo.GetAreasStatusAsync(cancellationToken)).FirstOrDefault(x => x.Id == areaId));
             }
             catch (Exception ex)
             {
@@ -122,18 +119,19 @@ namespace ComelitApiGateway.Controllers
         }
 
         /// <summary>
-        /// Return true if alarm of area is enabled 
+        /// Return true if alarm of area is enabled
         /// </summary>
         /// <param name="areaId"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpGet("areas/{areaId}/is-active")]
         [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> IsAlarmAreaActive(int areaId)
+        public async Task<IActionResult> IsAlarmAreaActive(int areaId, CancellationToken cancellationToken)
         {
             try
             {
-                var areaStatus = (await _vedo.GetAreasStatus()).FirstOrDefault(x => x.Id == areaId);
+                var areaStatus = (await _vedo.GetAreasStatusAsync(cancellationToken)).FirstOrDefault(x => x.Id == areaId);
                 if (areaStatus == null) return Ok(false);
                 return Ok(areaStatus.Status == AlarmStatusEnum.Active || areaStatus.Status == AlarmStatusEnum.Activating);
 
@@ -146,17 +144,17 @@ namespace ComelitApiGateway.Controllers
         }
 
         /// <summary>
-        ///  Return true if alarm of all areas is enabled 
+        ///  Return true if alarm of all areas is enabled
         /// </summary>
         /// <returns></returns>
         [HttpGet("areas/all/is-active")]
         [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> IsAlarmActive()
+        public async Task<IActionResult> IsAlarmActive(CancellationToken cancellationToken)
         {
             try
             {
-                return Ok((await _vedo.GetAreasStatus()).Any(x => x.Status == AlarmStatusEnum.Active || x.Status == AlarmStatusEnum.PartialActive));
+                return Ok((await _vedo.GetAreasStatusAsync(cancellationToken)).Any(x => x.Status == AlarmStatusEnum.Active || x.Status == AlarmStatusEnum.PartialActive));
             }
             catch (Exception ex)
             {
@@ -169,15 +167,16 @@ namespace ComelitApiGateway.Controllers
         /// Get list of zones of specific area
         /// </summary>
         /// <param name="areaId"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpGet("areas/{areaId}/zones")]
         [ProducesResponseType(typeof(List<VedoZoneDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> GetZonesStatus(int areaId)
+        public async Task<IActionResult> GetZonesStatus(int areaId, CancellationToken cancellationToken)
         {
             try
             {
-                return Ok(await _vedo.GetZoneList(areaId));
+                return Ok(await _vedo.GetZoneListAsync(areaId, cancellationToken: cancellationToken));
             }
             catch (Exception ex)
             {
@@ -194,11 +193,11 @@ namespace ComelitApiGateway.Controllers
         [HttpGet("areas/all/zones")]
         [ProducesResponseType(typeof(List<VedoZoneDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> GetAllZonesStatus()
+        public async Task<IActionResult> GetAllZonesStatus(CancellationToken cancellationToken)
         {
             try
             {
-                return Ok(await _vedo.GetZoneList(-1));
+                return Ok(await _vedo.GetZoneListAsync(-1, cancellationToken: cancellationToken));
             }
             catch (Exception ex)
             {
@@ -219,40 +218,41 @@ namespace ComelitApiGateway.Controllers
         [HttpPost("areas/all/arm")]
         [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> ArmAllAreas()
+        public async Task<IActionResult> ArmAllAreas(CancellationToken cancellationToken)
         {
             try
             {
-                return Ok(await _vedo.ArmAlarm());
+                return Ok(await _vedo.ArmAlarmAsync(cancellationToken: cancellationToken));
             }
             catch (Exception ex)
             {
                 ManageException(ex);
                 return BadRequest(ex.Message);
             }
-           
+
         }
 
         /// <summary>
         /// Enable alarm of specific area
         /// </summary>
         /// <param name="areaId"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpPost("areas/{areaId}/arm")]
         [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> ArmArea(int areaId)
+        public async Task<IActionResult> ArmArea(int areaId, CancellationToken cancellationToken)
         {
             try
             {
-                return Ok(await _vedo.ArmAlarm(areaId));
+                return Ok(await _vedo.ArmAlarmAsync(areaId, cancellationToken: cancellationToken));
             }
             catch (Exception ex)
             {
                 ManageException(ex);
                 return BadRequest(ex.Message);
             }
-            
+
         }
 
         /// <summary>
@@ -262,40 +262,41 @@ namespace ComelitApiGateway.Controllers
         [HttpPost("areas/all/disarm")]
         [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> DisarmAllAreas()
+        public async Task<IActionResult> DisarmAllAreas(CancellationToken cancellationToken)
         {
             try
             {
-                return Ok(await _vedo.DisarmAlarm());
+                return Ok(await _vedo.DisarmAlarmAsync(cancellationToken: cancellationToken));
             }
             catch (Exception ex)
             {
                 ManageException(ex);
                 return BadRequest(ex.Message);
             }
-           
+
         }
 
         /// <summary>
         /// Disable alarm of specific area
         /// </summary>
         /// <param name="areaId"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpPost("areas/{areaId}/disarm")]
         [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> DisarmArea(int areaId)
+        public async Task<IActionResult> DisarmArea(int areaId, CancellationToken cancellationToken)
         {
             try
             {
-                return Ok(await _vedo.DisarmAlarm(areaId));
+                return Ok(await _vedo.DisarmAlarmAsync(areaId, cancellationToken: cancellationToken));
             }
             catch (Exception ex)
             {
                 ManageException(ex);
                 return BadRequest(ex.Message);
             }
-            
+
         }
 
         /// <summary>
@@ -305,18 +306,18 @@ namespace ComelitApiGateway.Controllers
         [HttpPost("areas/all/arm-disarm")]
         [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> ArmDisarmAllAreas()
+        public async Task<IActionResult> ArmDisarmAllAreas(CancellationToken cancellationToken)
         {
             try
             {
-                if ((await _vedo.GetAreasStatus()).Any(x => x.Armed))
+                if ((await _vedo.GetAreasStatusAsync(cancellationToken)).Any(x => x.Armed))
                 {
-                    await _vedo.DisarmAlarm();
+                    await _vedo.DisarmAlarmAsync(cancellationToken: cancellationToken);
                     return Ok(false);
                 }
                 else
                 {
-                    await _vedo.ArmAlarm();
+                    await _vedo.ArmAlarmAsync(cancellationToken: cancellationToken);
                     return Ok(true);
                 }
             }
@@ -325,32 +326,33 @@ namespace ComelitApiGateway.Controllers
                 ManageException(ex);
                 return BadRequest(ex.Message);
             }
-            
+
         }
 
         /// <summary>
         /// Disable alarm of specific area
         /// </summary>
         /// <param name="areaId"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpPost("areas/{areaId}/arm-disarm")]
         [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> ArmDisarmAllAreas(int areaId)
+        public async Task<IActionResult> ArmDisarmAllAreas(int areaId, CancellationToken cancellationToken)
         {
             try
             {
-                var area = (await _vedo.GetAreasStatus()).FirstOrDefault(x => x.Id == areaId);
+                var area = (await _vedo.GetAreasStatusAsync(cancellationToken)).FirstOrDefault(x => x.Id == areaId);
                 if (area != null)
                 {
                     if (area.Armed)
                     {
-                        await _vedo.DisarmAlarm(areaId);
+                        await _vedo.DisarmAlarmAsync(areaId, cancellationToken: cancellationToken);
                         return Ok(false);
                     }
                     else
                     {
-                        await _vedo.ArmAlarm(areaId);
+                        await _vedo.ArmAlarmAsync(areaId, cancellationToken: cancellationToken);
                         return Ok(true);
                     }
                 }
@@ -370,15 +372,16 @@ namespace ComelitApiGateway.Controllers
         /// Exclude zone from area (ex. windows, door, sensor, etc..).
         /// </summary>
         /// <param name="zoneId"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpPost("zones/{zoneId}/exclude")]
         [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> ExcludeZone(int zoneId)
+        public async Task<IActionResult> ExcludeZone(int zoneId, CancellationToken cancellationToken)
         {
             try
             {
-                return Ok(await _vedo.ExcludeZone(zoneId));
+                return Ok(await _vedo.ExcludeZoneAsync(zoneId, cancellationToken));
             }
             catch (Exception ex)
             {
@@ -392,15 +395,16 @@ namespace ComelitApiGateway.Controllers
         /// Include zone that has been excluded
         /// </summary>
         /// <param name="zoneId"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpPost("zones/{zoneId}/include")]
         [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> IncludeZone(int zoneId)
+        public async Task<IActionResult> IncludeZone(int zoneId, CancellationToken cancellationToken)
         {
             try
             {
-                return Ok(await _vedo.IncludeZone(zoneId));
+                return Ok(await _vedo.IncludeZoneAsync(zoneId, cancellationToken));
             }
             catch (Exception ex)
             {
@@ -414,15 +418,16 @@ namespace ComelitApiGateway.Controllers
         /// Isolate zone
         /// </summary>
         /// <param name="zoneId"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpPost("zones/{zoneId}/isolate")]
         [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> IsolateZone(int zoneId)
+        public async Task<IActionResult> IsolateZone(int zoneId, CancellationToken cancellationToken)
         {
             try
             {
-                return Ok(await _vedo.IsolateZone(zoneId));
+                return Ok(await _vedo.IsolateZoneAsync(zoneId, cancellationToken));
             }
             catch (Exception ex)
             {
@@ -436,15 +441,16 @@ namespace ComelitApiGateway.Controllers
         /// Remove zone from list of isolated devices
         /// </summary>
         /// <param name="zoneId"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpPost("zones/{zoneId}/remove-isolate")]
         [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> UnisolateZone(int zoneId)
+        public async Task<IActionResult> UnisolateZone(int zoneId, CancellationToken cancellationToken)
         {
             try
             {
-                return Ok(await _vedo.UnisolateZone(zoneId));
+                return Ok(await _vedo.UnisolateZoneAsync(zoneId, cancellationToken));
             }
             catch (Exception ex)
             {

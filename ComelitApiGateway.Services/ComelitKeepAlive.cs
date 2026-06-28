@@ -45,7 +45,7 @@ namespace ComelitApiGateway.Services
         private async Task PingStatusAsync(CancellationToken cancellationToken)
         {
             // Get areas to check if the session is still valid. If not, re-login.
-            var response = await comelitClient.GetAreasStatus();
+            var response = await comelitClient.GetAreasStatusAsync(cancellationToken);
 
             if (response.Any())
             {
@@ -53,7 +53,7 @@ namespace ComelitApiGateway.Services
             }
             else
             {
-                _ = await comelitClient.Login();
+                _ = await comelitClient.LoginAsync(cancellationToken);
                 logger.LogWarning("Ping failed, re-login attempted.");
             }
         }
