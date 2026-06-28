@@ -134,5 +134,4 @@ _<area_id>_ you can discover the areas configurated in your alarm system with th
 
 
 ## Contribution
-This project is distributed under the MIT license. See the [LICENSE](LICENSE) file for more information. \
 **Text me** if you want to partecipate to this project!
